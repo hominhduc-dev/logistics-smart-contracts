@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Tuần tự gọi hàm LogisticsTracking.sol",
+    "output": "logistics-shipment-sequence.html",
+    "viewBox": [
+      1060,
+      640
+    ],
+    "column_fit": "spread",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    {
+      "id": "sender",
+      "type": "frontend",
+      "label": "Người gửi",
+      "sublabel": "Sender"
+    },
+    {
+      "id": "carrier",
+      "type": "frontend",
+      "label": "Vận chuyển",
+      "sublabel": "Carrier"
+    },
+    {
+      "id": "contract",
+      "type": "backend",
+      "label": "LogisticsTracking",
+      "sublabel": "smart contract"
+    },
+    {
+      "id": "events",
+      "type": "messagebus",
+      "label": "Event log",
+      "sublabel": "dApp lắng nghe"
+    },
+    {
+      "id": "receiver",
+      "type": "frontend",
+      "label": "Người nhận",
+      "sublabel": "Receiver"
+    }
+  ],
+  "segments": [
+    {
+      "from": 152,
+      "to": 258,
+      "label": "Tạo đơn"
+    },
+    {
+      "from": 272,
+      "to": 338,
+      "label": "Vận chuyển"
+    },
+    {
+      "from": 352,
+      "to": 486,
+      "label": "Giao và tra cứu"
+    },
+    {
+      "from": 500,
+      "to": 566,
+      "label": "Ngoại lệ: hủy đơn"
+    }
+  ],
+  "messages": [
+    {
+      "from": "sender",
+      "to": "contract",
+      "y": 176,
+      "label": "createShipment()",
+      "variant": "emphasis"
+    },
+    {
+      "from": "contract",
+      "to": "events",
+      "y": 210,
+      "label": "ShipmentCreated",
+      "variant": "dashed"
+    },
+    {
+      "from": "contract",
+      "to": "sender",
+      "y": 244,
+      "label": "shipmentId",
+      "variant": "return"
+    },
+    {
+      "from": "carrier",
+      "to": "contract",
+      "y": 290,
+      "label": "updateStatus(PickedUp / InTransit)",
+      "variant": "default"
+    },
+    {
+      "from": "contract",
+      "to": "events",
+      "y": 324,
+      "label": "StatusUpdated",
+      "variant": "dashed"
+    },
+    {
+      "from": "carrier",
+      "to": "contract",
+      "y": 370,
+      "label": "updateStatus(Delivered)",
+      "variant": "emphasis"
+    },
+    {
+      "from": "contract",
+      "to": "events",
+      "y": 404,
+      "label": "ShipmentDelivered",
+      "variant": "dashed"
+    },
+    {
+      "from": "receiver",
+      "to": "contract",
+      "y": 438,
+      "label": "getHistory(id)",
+      "variant": "default"
+    },
+    {
+      "from": "contract",
+      "to": "receiver",
+      "y": 472,
+      "label": "StatusUpdate[]",
+      "variant": "return"
+    },
+    {
+      "from": "sender",
+      "to": "contract",
+      "y": 518,
+      "label": "cancelShipment()",
+      "variant": "security"
+    },
+    {
+      "from": "contract",
+      "to": "events",
+      "y": 552,
+      "label": "ShipmentCancelled",
+      "variant": "dashed"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "contract",
+      "from": 170,
+      "to": 250,
+      "type": "backend"
+    },
+    {
+      "participant": "contract",
+      "from": 284,
+      "to": 330,
+      "type": "backend"
+    },
+    {
+      "participant": "contract",
+      "from": 364,
+      "to": 478,
+      "type": "backend"
+    },
+    {
+      "participant": "contract",
+      "from": 512,
+      "to": 558,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Ai được gọi hàm",
+      "items": [
+        "Chỉ người gửi tạo và hủy đơn",
+        "Ba bên của đơn đều cập nhật được trạng thái",
+        "Hàm đọc ai cũng gọi được"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Mọi bước đều để lại dấu vết",
+      "items": [
+        "Mỗi lần đổi trạng thái thêm một StatusUpdate",
+        "Mỗi thay đổi phát một event cho dApp",
+        "Delivered lưu thêm deliveredAt"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Giới hạn hủy đơn",
+      "items": [
+        "Chỉ hủy khi Created hoặc PickedUp",
+        "Delivered hoặc Cancelled thì không cập nhật nữa",
+        "Lý do hủy được lưu vào lịch sử"
+      ]
+    }
+  ]
+}
