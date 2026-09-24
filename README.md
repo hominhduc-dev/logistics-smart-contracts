@@ -80,9 +80,91 @@ flowchart LR
 
 ### Getting started
 
-1. Open the project in [Remix IDE](https://remix.ethereum.org), or use Hardhat or Foundry.
-2. Compile with Solidity **0.8.24** (`LogisticsTracking` requires `^0.8.24`; `Warehouse` accepts `^0.8.0`).
-3. Deploy to a local node or a testnet such as Sepolia.
+#### Compile
+
+1. Open the project in [Remix IDE](https://remix.ethereum.org). To work on the local folder, run this in the project root and choose **Workspaces → Connect to Localhost** in Remix:
+   ```bash
+   npx @remix-project/remixd -s . -u https://remix.ethereum.org
+   ```
+2. In the **Solidity Compiler** tab, select compiler **0.8.24** (`LogisticsTracking` requires `^0.8.24`; `Warehouse` accepts `^0.8.0`).
+3. Open `contracts/LogisticsTracking.sol` and `contracts/Warehouse.sol` and click **Compile** for each. The imported interfaces are compiled automatically.
+
+To compile from the command line instead (run inside `contracts/`):
+
+```bash
+npx --yes solc@0.8.24 --bin --abi --base-path . -o build LogisticsTracking.sol Warehouse.sol
+```
+
+#### Deploy
+
+1. In the **Deploy & Run Transactions** tab, set **Environment** to **Remix VM (Cancun)**. It provides 10 test accounts with 100 fake ETH each.
+2. In **Contract**, select `LogisticsTracking` or `Warehouse`. Interfaces (`I...`) cannot be deployed.
+3. Click **Deploy**. The contract appears under **Deployed Contracts**.
+
+To deploy to the Sepolia testnet, get Sepolia ETH from a faucet, set **Environment** to **Injected Provider – MetaMask**, and confirm the transaction in MetaMask.
+
+### Test scenarios
+
+#### LogisticsTracking
+
+Use three Remix VM accounts: **Account 1 = Sender** (deployer), **Account 2 = Carrier**, **Account 3 = Receiver**. Switch accounts in the **Account** field before each call.
+
+`Status` values are passed as numbers: `0` = Created, `1` = PickedUp, `2` = InTransit, `3` = Delivered, `4` = Cancelled.
+
+**Happy path**
+
+| # | Account | Function | Arguments | Expected result |
+|---|---|---|---|---|
+| 1 | Sender | `createShipment` | `<Carrier>, <Receiver>, "Laptop", "Ha Noi", "HCM"` | Shipment ID 1 is created, `ShipmentCreated` is emitted |
+| 2 | Carrier | `updateStatus` | `1, 1, "Ha Noi warehouse", "Picked up"` | Status is `PickedUp` |
+| 3 | Carrier | `updateStatus` | `1, 2, "Da Nang", "In transit"` | Status is `InTransit` |
+| 4 | Carrier | `updateStatus` | `1, 3, "HCM", "Delivered"` | Status is `Delivered`, `deliveredAt` is set, `ShipmentDelivered` is emitted |
+| 5 | Any | `getShipment` / `getHistory` | `1` | Status `3`, 4 history entries |
+
+**Cancellation**
+
+| # | Account | Function | Arguments | Expected result |
+|---|---|---|---|---|
+| 1 | Sender | `createShipment` | `<Carrier>, <Receiver>, "Phone", "Ha Noi", "Hue"` | Shipment ID 2 is created |
+| 2 | Sender | `cancelShipment` | `2, "Customer changed order"` | Status is `Cancelled`, `ShipmentCancelled` is emitted |
+| 3 | Any | `getHistory` | `2` | 2 entries; the last one holds the reason |
+
+**Expected reverts**
+
+| Case | Call | Revert message |
+|---|---|---|
+| Unrelated account updates a shipment | Account 4: `updateStatus(1, 2, "x", "x")` | `Ban khong lien quan den don hang nay` |
+| Update after delivery | Carrier: `updateStatus(1, 2, "x", "x")` on shipment 1 | `Don hang da giao, khong the cap nhat` |
+| Update after cancellation | Sender: `updateStatus(2, 1, "x", "x")` on shipment 2 | `Don hang da bi huy` |
+| Go back to `Created` | Create shipment 3, then `updateStatus(3, 0, "x", "x")` | `Khong the quay lai trang thai Created` |
+| Non-sender cancels | Carrier: `cancelShipment(3, "x")` | `Chi nguoi gui moi duoc huy` |
+| Cancel while in transit | Move shipment 3 to `InTransit`, then Sender: `cancelShipment(3, "x")` | `Khong the huy o giai doan nay` |
+| Zero address | `createShipment(0x0000000000000000000000000000000000000000, <Receiver>, ...)` | `Dia chi khong hop le` |
+| Non-owner authorizes a carrier | Account 2: `setCarrierAuthorization(<Carrier>, true)` | `Chi owner moi duoc goi` |
+| Unknown shipment | `getShipment(999)` | `Shipment khong ton tai` |
+
+#### Warehouse
+
+`WarehouseStatus` values: `0` = InStock, `1` = OutOfStock, `2` = Returned.
+
+| # | Function | Arguments | Expected result |
+|---|---|---|---|
+| 1 | `getStock` | `101` | `0` (product does not exist yet) |
+| 2 | `receiveStock` | `101, 50` | `getStock(101)` = 50, status `0` |
+| 3 | `takeForShelf` | `101, 20` | Quantity 30, status `0` |
+| 4 | `takeForShelf` | `101, 30` | Quantity 0, status `1` |
+| 5 | `returnFromShelf` | `101, 5` | Quantity 5, `returnedQuantity` 5, status `2` |
+| 6 | `receiveStock` | `101, 10` | Quantity 15, status `0` |
+
+**Expected reverts**
+
+| Call | Revert message |
+|---|---|
+| `receiveStock(101, 0)` | `Amount must be greater than 0` |
+| `takeForShelf(101, 1000)` | `Not enough stock in warehouse` |
+| `takeForShelf(999, 1)` | `Warehouse item not found` |
+| `getWarehouseItem(999)` | `Warehouse item not found` |
+| `returnFromShelf(101, 0)` | `Return amount must be greater than 0` |
 
 ### Diagram
 
@@ -166,9 +248,91 @@ flowchart LR
 
 ### Chạy thử
 
-1. Mở dự án trong [Remix IDE](https://remix.ethereum.org), hoặc dùng Hardhat hay Foundry.
-2. Biên dịch với Solidity **0.8.24** (`LogisticsTracking` yêu cầu `^0.8.24`; `Warehouse` chấp nhận `^0.8.0`).
-3. Deploy lên local node hoặc mạng test như Sepolia.
+#### Compile
+
+1. Mở dự án trong [Remix IDE](https://remix.ethereum.org). Để làm việc trực tiếp với thư mục trên máy, chạy lệnh sau ở thư mục gốc của dự án, rồi trong Remix chọn **Workspaces → Connect to Localhost**:
+   ```bash
+   npx @remix-project/remixd -s . -u https://remix.ethereum.org
+   ```
+2. Ở tab **Solidity Compiler**, chọn compiler **0.8.24** (`LogisticsTracking` yêu cầu `^0.8.24`; `Warehouse` chấp nhận `^0.8.0`).
+3. Mở `contracts/LogisticsTracking.sol` và `contracts/Warehouse.sol`, bấm **Compile** cho từng file. Các interface được `import` sẽ tự compile theo.
+
+Hoặc compile bằng dòng lệnh (chạy trong thư mục `contracts/`):
+
+```bash
+npx --yes solc@0.8.24 --bin --abi --base-path . -o build LogisticsTracking.sol Warehouse.sol
+```
+
+#### Deploy
+
+1. Ở tab **Deploy & Run Transactions**, chọn **Environment** là **Remix VM (Cancun)**. Remix cho sẵn 10 tài khoản test, mỗi tài khoản 100 ETH ảo.
+2. Ở ô **Contract**, chọn `LogisticsTracking` hoặc `Warehouse`. Interface (`I...`) không deploy được.
+3. Bấm **Deploy**. Contract hiện ở mục **Deployed Contracts**.
+
+Để deploy lên testnet Sepolia: lấy ETH Sepolia từ faucet, chọn **Environment** là **Injected Provider – MetaMask**, rồi xác nhận giao dịch trong MetaMask.
+
+### Kịch bản test
+
+#### LogisticsTracking
+
+Dùng 3 tài khoản Remix VM: **Account 1 = Người gửi** (người deploy), **Account 2 = Đơn vị vận chuyển**, **Account 3 = Người nhận**. Đổi tài khoản ở ô **Account** trước mỗi lần gọi hàm.
+
+Giá trị `Status` nhập bằng số: `0` = Created, `1` = PickedUp, `2` = InTransit, `3` = Delivered, `4` = Cancelled.
+
+**Luồng thành công**
+
+| # | Tài khoản | Hàm | Tham số | Kết quả mong đợi |
+|---|---|---|---|---|
+| 1 | Người gửi | `createShipment` | `<Carrier>, <Receiver>, "Laptop", "Ha Noi", "HCM"` | Tạo đơn ID 1, phát event `ShipmentCreated` |
+| 2 | Vận chuyển | `updateStatus` | `1, 1, "Kho Ha Noi", "Da lay hang"` | Trạng thái `PickedUp` |
+| 3 | Vận chuyển | `updateStatus` | `1, 2, "Da Nang", "Dang van chuyen"` | Trạng thái `InTransit` |
+| 4 | Vận chuyển | `updateStatus` | `1, 3, "HCM", "Da giao"` | Trạng thái `Delivered`, có `deliveredAt`, phát event `ShipmentDelivered` |
+| 5 | Bất kỳ | `getShipment` / `getHistory` | `1` | Trạng thái `3`, 4 dòng lịch sử |
+
+**Hủy đơn**
+
+| # | Tài khoản | Hàm | Tham số | Kết quả mong đợi |
+|---|---|---|---|---|
+| 1 | Người gửi | `createShipment` | `<Carrier>, <Receiver>, "Dien thoai", "Ha Noi", "Hue"` | Tạo đơn ID 2 |
+| 2 | Người gửi | `cancelShipment` | `2, "Khach doi don"` | Trạng thái `Cancelled`, phát event `ShipmentCancelled` |
+| 3 | Bất kỳ | `getHistory` | `2` | 2 dòng lịch sử, dòng cuối chứa lý do hủy |
+
+**Các trường hợp phải revert**
+
+| Trường hợp | Lệnh gọi | Thông báo lỗi |
+|---|---|---|
+| Tài khoản không liên quan cập nhật đơn | Account 4: `updateStatus(1, 2, "x", "x")` | `Ban khong lien quan den don hang nay` |
+| Cập nhật sau khi đã giao | Vận chuyển: `updateStatus(1, 2, "x", "x")` với đơn 1 | `Don hang da giao, khong the cap nhat` |
+| Cập nhật sau khi đã hủy | Người gửi: `updateStatus(2, 1, "x", "x")` với đơn 2 | `Don hang da bi huy` |
+| Quay lại `Created` | Tạo đơn 3, rồi gọi `updateStatus(3, 0, "x", "x")` | `Khong the quay lai trang thai Created` |
+| Người khác người gửi hủy đơn | Vận chuyển: `cancelShipment(3, "x")` | `Chi nguoi gui moi duoc huy` |
+| Hủy khi đang vận chuyển | Chuyển đơn 3 sang `InTransit`, rồi người gửi gọi `cancelShipment(3, "x")` | `Khong the huy o giai doan nay` |
+| Địa chỉ 0 | `createShipment(0x0000000000000000000000000000000000000000, <Receiver>, ...)` | `Dia chi khong hop le` |
+| Không phải owner duyệt carrier | Account 2: `setCarrierAuthorization(<Carrier>, true)` | `Chi owner moi duoc goi` |
+| Đơn không tồn tại | `getShipment(999)` | `Shipment khong ton tai` |
+
+#### Warehouse
+
+Giá trị `WarehouseStatus`: `0` = InStock, `1` = OutOfStock, `2` = Returned.
+
+| # | Hàm | Tham số | Kết quả mong đợi |
+|---|---|---|---|
+| 1 | `getStock` | `101` | `0` (sản phẩm chưa tồn tại) |
+| 2 | `receiveStock` | `101, 50` | `getStock(101)` = 50, trạng thái `0` |
+| 3 | `takeForShelf` | `101, 20` | Còn 30, trạng thái `0` |
+| 4 | `takeForShelf` | `101, 30` | Còn 0, trạng thái `1` |
+| 5 | `returnFromShelf` | `101, 5` | Còn 5, `returnedQuantity` = 5, trạng thái `2` |
+| 6 | `receiveStock` | `101, 10` | Còn 15, trạng thái `0` |
+
+**Các trường hợp phải revert**
+
+| Lệnh gọi | Thông báo lỗi |
+|---|---|
+| `receiveStock(101, 0)` | `Amount must be greater than 0` |
+| `takeForShelf(101, 1000)` | `Not enough stock in warehouse` |
+| `takeForShelf(999, 1)` | `Warehouse item not found` |
+| `getWarehouseItem(999)` | `Warehouse item not found` |
+| `returnFromShelf(101, 0)` | `Return amount must be greater than 0` |
 
 ### Sơ đồ
 
