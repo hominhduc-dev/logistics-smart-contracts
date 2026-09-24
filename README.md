@@ -18,7 +18,11 @@ contracts/
 ├── LogisticsTracking.sol        # Shipment lifecycle tracking (implements ILogisticsTracking)
 └── Warehouse.sol                # Warehouse stock management (implements IWarehouse)
 diagrams/
-└── logistics-flow.workflow.json # Archify workflow diagram spec
+├── logistics-flow.workflow.json       # Archify workflow diagram spec
+├── logistics-shipment.sequence.json   # Archify sequence diagram spec
+├── logistics-shipment-sequence.html   # Rendered interactive sequence diagram
+├── warehouse-stock.sequence.json      # Archify sequence diagram spec (Warehouse)
+└── warehouse-stock-sequence.html      # Rendered interactive sequence diagram (Warehouse)
 ```
 
 Each contract implements its own interface. Other contracts (for example a supermarket or a carrier dApp) can call them through the interface with only the deployed address:
@@ -168,6 +172,60 @@ Use three Remix VM accounts: **Account 1 = Sender** (deployer), **Account 2 = Ca
 
 ### Diagram
 
+#### Sequence diagram
+
+The function-call sequence of `LogisticsTracking`:
+
+```mermaid
+sequenceDiagram
+    actor S as Sender
+    actor C as Carrier
+    participant L as LogisticsTracking
+    participant E as Event log
+    actor R as Receiver
+    S->>L: createShipment()
+    L--)E: ShipmentCreated
+    L-->>S: shipmentId
+    C->>L: updateStatus(PickedUp / InTransit)
+    L--)E: StatusUpdated
+    C->>L: updateStatus(Delivered)
+    L--)E: ShipmentDelivered
+    R->>L: getHistory(id)
+    L-->>R: StatusUpdate[]
+    opt Cancel while Created or PickedUp
+        S->>L: cancelShipment()
+        L--)E: ShipmentCancelled
+    end
+```
+
+For the interactive version (pan/zoom, dark mode, export), download [`diagrams/logistics-shipment-sequence.html`](diagrams/logistics-shipment-sequence.html) and open it in a browser. The source spec is [`diagrams/logistics-shipment.sequence.json`](diagrams/logistics-shipment.sequence.json).
+
+The function-call sequence of `Warehouse`:
+
+```mermaid
+sequenceDiagram
+    actor P as Supplier
+    actor M as Supermarket
+    participant W as Warehouse
+    participant E as Event log
+    P->>W: receiveStock(id, amount)
+    W--)E: StockReceived
+    M->>W: getStock(id)
+    W-->>M: quantity
+    M->>W: takeForShelf(id, amount)
+    W--)E: TakenForShelf
+    M->>W: returnFromShelf(id, amount)
+    W--)E: ReturnedToWarehouse
+    opt amount is greater than the stock
+        M->>W: takeForShelf(id, amount)
+        W-->>M: revert: Not enough stock in warehouse
+    end
+```
+
+Interactive version: [`diagrams/warehouse-stock-sequence.html`](diagrams/warehouse-stock-sequence.html). Source spec: [`diagrams/warehouse-stock.sequence.json`](diagrams/warehouse-stock.sequence.json).
+
+#### Workflow diagram
+
 `diagrams/logistics-flow.workflow.json` is the Archify spec of the shipment workflow. Render it with Archify to get an interactive HTML diagram.
 
 ---
@@ -186,7 +244,11 @@ contracts/
 ├── LogisticsTracking.sol        # Theo dõi vòng đời lô hàng (kế thừa ILogisticsTracking)
 └── Warehouse.sol                # Quản lý tồn kho (kế thừa IWarehouse)
 diagrams/
-└── logistics-flow.workflow.json # Đặc tả sơ đồ workflow Archify
+├── logistics-flow.workflow.json       # Đặc tả sơ đồ workflow Archify
+├── logistics-shipment.sequence.json   # Đặc tả sơ đồ tuần tự Archify
+├── logistics-shipment-sequence.html   # Sơ đồ tuần tự tương tác đã render
+├── warehouse-stock.sequence.json      # Đặc tả sơ đồ tuần tự Archify (Warehouse)
+└── warehouse-stock-sequence.html      # Sơ đồ tuần tự tương tác đã render (Warehouse)
 ```
 
 Mỗi contract kế thừa interface riêng của nó. Contract khác (ví dụ siêu thị hoặc dApp của đơn vị vận chuyển) có thể gọi qua interface, chỉ cần địa chỉ đã deploy:
@@ -335,6 +397,60 @@ Giá trị `WarehouseStatus`: `0` = InStock, `1` = OutOfStock, `2` = Returned.
 | `returnFromShelf(101, 0)` | `Return amount must be greater than 0` |
 
 ### Sơ đồ
+
+#### Sơ đồ tuần tự
+
+Trình tự gọi hàm của `LogisticsTracking`:
+
+```mermaid
+sequenceDiagram
+    actor S as Người gửi
+    actor C as Vận chuyển
+    participant L as LogisticsTracking
+    participant E as Event log
+    actor R as Người nhận
+    S->>L: createShipment()
+    L--)E: ShipmentCreated
+    L-->>S: shipmentId
+    C->>L: updateStatus(PickedUp / InTransit)
+    L--)E: StatusUpdated
+    C->>L: updateStatus(Delivered)
+    L--)E: ShipmentDelivered
+    R->>L: getHistory(id)
+    L-->>R: StatusUpdate[]
+    opt Hủy khi đơn đang Created hoặc PickedUp
+        S->>L: cancelShipment()
+        L--)E: ShipmentCancelled
+    end
+```
+
+Để xem bản tương tác (kéo, zoom, chế độ tối, export), tải [`diagrams/logistics-shipment-sequence.html`](diagrams/logistics-shipment-sequence.html) về và mở bằng trình duyệt. File đặc tả nguồn là [`diagrams/logistics-shipment.sequence.json`](diagrams/logistics-shipment.sequence.json).
+
+Trình tự gọi hàm của `Warehouse`:
+
+```mermaid
+sequenceDiagram
+    actor P as Nhà cung cấp
+    actor M as Siêu thị
+    participant W as Warehouse
+    participant E as Event log
+    P->>W: receiveStock(id, amount)
+    W--)E: StockReceived
+    M->>W: getStock(id)
+    W-->>M: quantity
+    M->>W: takeForShelf(id, amount)
+    W--)E: TakenForShelf
+    M->>W: returnFromShelf(id, amount)
+    W--)E: ReturnedToWarehouse
+    opt amount lớn hơn số tồn kho
+        M->>W: takeForShelf(id, amount)
+        W-->>M: revert: Not enough stock in warehouse
+    end
+```
+
+Bản tương tác: [`diagrams/warehouse-stock-sequence.html`](diagrams/warehouse-stock-sequence.html). File đặc tả nguồn: [`diagrams/warehouse-stock.sequence.json`](diagrams/warehouse-stock.sequence.json).
+
+#### Sơ đồ workflow
 
 `diagrams/logistics-flow.workflow.json` là đặc tả Archify của workflow lô hàng. Render bằng Archify để có sơ đồ HTML tương tác.
 
