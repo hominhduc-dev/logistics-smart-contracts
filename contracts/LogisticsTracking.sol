@@ -1,42 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "./interfaces/ILogisticsTracking.sol";
+
 /**
  * @title LogisticsTracking
  * @notice Hop dong theo doi chuoi cung ung (logistics) tren blockchain.
  * Moi lo hang (Shipment) duoc tao ra, gan don vi van chuyen, va cap nhat
  * trang thai qua tung chang cho den khi giao hang thanh cong.
  */
-contract LogisticsTracking {
-    enum Status {
-        Created,
-        PickedUp,
-        InTransit,
-        Delivered,
-        Cancelled
-    }
-
-    struct Shipment {
-        uint256 id;
-        address sender;
-        address carrier;
-        address receiver;
-        string description;
-        string originLocation;
-        string destination;
-        uint256 createdAt;
-        uint256 deliveredAt;
-        Status status;
-    }
-
-    struct StatusUpdate {
-        Status status;
-        string location;
-        string note;
-        uint256 timestamp;
-        address updatedBy;
-    }
-
+contract LogisticsTracking is ILogisticsTracking {
     address public owner;
     uint256 private nextShipmentId = 1;
 
@@ -44,24 +17,6 @@ contract LogisticsTracking {
     mapping(uint256 => StatusUpdate[]) public shipmentHistory;
 
     mapping(address => bool) public isAuthorizedCarrier;
-
-    event ShipmentCreated(
-        uint256 indexed shipmentId,
-        address indexed sender,
-        address indexed carrier,
-        address receiver
-    );
-
-    event StatusUpdated(
-        uint256 indexed shipmentId,
-        Status status,
-        string location,
-        address updatedBy
-    );
-
-    event ShipmentDelivered(uint256 indexed shipmentId, uint256 timestamp);
-    event ShipmentCancelled(uint256 indexed shipmentId, string reason);
-    event CarrierAuthorized(address indexed carrier, bool authorized);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Chi owner moi duoc goi");
@@ -88,7 +43,7 @@ contract LogisticsTracking {
         owner = msg.sender;
     }
 
-    function setCarrierAuthorization(address _carrier, bool _authorized) external onlyOwner {
+    function setCarrierAuthorization(address _carrier, bool _authorized) external override onlyOwner {
         isAuthorizedCarrier[_carrier] = _authorized;
         emit CarrierAuthorized(_carrier, _authorized);
     }
@@ -99,7 +54,7 @@ contract LogisticsTracking {
         string calldata _description,
         string calldata _origin,
         string calldata _destination
-    ) external returns (uint256) {
+    ) external override returns (uint256) {
         require(_carrier != address(0) && _receiver != address(0), "Dia chi khong hop le");
 
         uint256 id = nextShipmentId++;
@@ -134,7 +89,7 @@ contract LogisticsTracking {
         Status _newStatus,
         string calldata _location,
         string calldata _note
-    ) external shipmentExists(_id) onlyParticipant(_id) {
+    ) external override shipmentExists(_id) onlyParticipant(_id) {
         Shipment storage s = shipments[_id];
 
         require(s.status != Status.Delivered, "Don hang da giao, khong the cap nhat");
@@ -161,6 +116,7 @@ contract LogisticsTracking {
 
     function cancelShipment(uint256 _id, string calldata _reason)
         external
+        override
         shipmentExists(_id)
     {
         Shipment storage s = shipments[_id];
@@ -183,6 +139,7 @@ contract LogisticsTracking {
     function getShipment(uint256 _id)
         external
         view
+        override
         shipmentExists(_id)
         returns (Shipment memory)
     {
@@ -192,13 +149,14 @@ contract LogisticsTracking {
     function getHistory(uint256 _id)
         external
         view
+        override
         shipmentExists(_id)
         returns (StatusUpdate[] memory)
     {
         return shipmentHistory[_id];
     }
 
-    function getHistoryCount(uint256 _id) external view returns (uint256) {
+    function getHistoryCount(uint256 _id) external view override returns (uint256) {
         return shipmentHistory[_id].length;
     }
 }

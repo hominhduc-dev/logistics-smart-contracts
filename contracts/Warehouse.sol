@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./interfaces/IWarehouse.sol";
+
 /**
  * @title Warehouse
  * @notice Nha kho trung tam cung cap hang cho sieu thi.
@@ -13,28 +15,10 @@ pragma solidity ^0.8.0;
  *
  * Hang duoc tra ve se co trang thai Returned.
  */
-contract Warehouse {
-    enum WarehouseStatus {
-        InStock,
-        OutOfStock,
-        Returned
-    }
-
-    struct WarehouseItem {
-        uint256 productId;
-        uint256 quantity;
-        uint256 returnedQuantity;
-        WarehouseStatus status;
-        bool exists;
-    }
-
+contract Warehouse is IWarehouse {
     mapping(uint256 => WarehouseItem) private items;
 
-    event StockReceived(uint256 indexed productId, uint256 amount, uint256 newQuantity);
-    event TakenForShelf(uint256 indexed productId, uint256 amount, uint256 remaining);
-    event ReturnedToWarehouse(uint256 indexed productId, uint256 amount, uint256 newQuantity);
-
-    function receiveStock(uint256 productId, uint256 amount) public {
+    function receiveStock(uint256 productId, uint256 amount) public override {
         require(amount > 0, "Amount must be greater than 0");
 
         if (!items[productId].exists) {
@@ -53,7 +37,7 @@ contract Warehouse {
         emit StockReceived(productId, amount, items[productId].quantity);
     }
 
-    function takeForShelf(uint256 productId, uint256 amount) external {
+    function takeForShelf(uint256 productId, uint256 amount) external override {
         require(items[productId].exists, "Warehouse item not found");
         require(amount > 0, "Amount must be greater than 0");
         require(items[productId].quantity >= amount, "Not enough stock in warehouse");
@@ -69,7 +53,7 @@ contract Warehouse {
         emit TakenForShelf(productId, amount, items[productId].quantity);
     }
 
-    function returnFromShelf(uint256 productId, uint256 amount) external {
+    function returnFromShelf(uint256 productId, uint256 amount) external override {
         require(amount > 0, "Return amount must be greater than 0");
 
         if (!items[productId].exists) {
@@ -89,12 +73,12 @@ contract Warehouse {
         emit ReturnedToWarehouse(productId, amount, items[productId].quantity);
     }
 
-    function getWarehouseItem(uint256 productId) public view returns (WarehouseItem memory) {
+    function getWarehouseItem(uint256 productId) public view override returns (WarehouseItem memory) {
         require(items[productId].exists, "Warehouse item not found");
         return items[productId];
     }
 
-    function getStock(uint256 productId) public view returns (uint256) {
+    function getStock(uint256 productId) public view override returns (uint256) {
         if (!items[productId].exists) {
             return 0;
         }
