@@ -36,22 +36,22 @@ interface ILogisticsTracking {
     }
 
     event ShipmentCreated(
-        uint256 indexed shipmentId,
-        address indexed sender,
-        address indexed carrier,
+        uint256 shipmentId,
+        address sender,
+        address carrier,
         address receiver
     );
 
     event StatusUpdated(
-        uint256 indexed shipmentId,
+        uint256 shipmentId,
         Status status,
         string location,
         address updatedBy
     );
 
-    event ShipmentDelivered(uint256 indexed shipmentId, uint256 timestamp);
-    event ShipmentCancelled(uint256 indexed shipmentId, string reason);
-    event CarrierAuthorized(address indexed carrier, bool authorized);
+    event ShipmentDelivered(uint256 shipmentId, uint256 timestamp);
+    event ShipmentCancelled(uint256 shipmentId, string reason);
+    event CarrierAuthorized(address carrier, bool authorized);
 
     function setCarrierAuthorization(address _carrier, bool _authorized) external;
 

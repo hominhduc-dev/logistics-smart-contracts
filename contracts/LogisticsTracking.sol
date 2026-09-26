@@ -18,32 +18,13 @@ contract LogisticsTracking is ILogisticsTracking {
 
     mapping(address => bool) public isAuthorizedCarrier;
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Chi owner moi duoc goi");
-        _;
-    }
-
-    modifier shipmentExists(uint256 _id) {
-        require(shipments[_id].id != 0, "Shipment khong ton tai");
-        _;
-    }
-
-    modifier onlyParticipant(uint256 _id) {
-        Shipment memory s = shipments[_id];
-        require(
-            msg.sender == s.sender ||
-            msg.sender == s.carrier ||
-            msg.sender == s.receiver,
-            "Ban khong lien quan den don hang nay"
-        );
-        _;
-    }
-
     constructor() {
         owner = msg.sender;
     }
 
-    function setCarrierAuthorization(address _carrier, bool _authorized) external override onlyOwner {
+    function setCarrierAuthorization(address _carrier, bool _authorized) external override {
+        require(msg.sender == owner, "Chi owner moi duoc goi");
+
         isAuthorizedCarrier[_carrier] = _authorized;
         emit CarrierAuthorized(_carrier, _authorized);
     }
@@ -89,8 +70,16 @@ contract LogisticsTracking is ILogisticsTracking {
         Status _newStatus,
         string calldata _location,
         string calldata _note
-    ) external override shipmentExists(_id) onlyParticipant(_id) {
+    ) external override {
+        require(shipments[_id].id != 0, "Shipment khong ton tai");
+
         Shipment storage s = shipments[_id];
+        require(
+            msg.sender == s.sender ||
+            msg.sender == s.carrier ||
+            msg.sender == s.receiver,
+            "Ban khong lien quan den don hang nay"
+        );
 
         require(s.status != Status.Delivered, "Don hang da giao, khong the cap nhat");
         require(s.status != Status.Cancelled, "Don hang da bi huy");
@@ -117,8 +106,9 @@ contract LogisticsTracking is ILogisticsTracking {
     function cancelShipment(uint256 _id, string calldata _reason)
         external
         override
-        shipmentExists(_id)
     {
+        require(shipments[_id].id != 0, "Shipment khong ton tai");
+
         Shipment storage s = shipments[_id];
         require(msg.sender == s.sender, "Chi nguoi gui moi duoc huy");
         require(s.status == Status.Created || s.status == Status.PickedUp, "Khong the huy o giai doan nay");
@@ -140,9 +130,10 @@ contract LogisticsTracking is ILogisticsTracking {
         external
         view
         override
-        shipmentExists(_id)
         returns (Shipment memory)
     {
+        require(shipments[_id].id != 0, "Shipment khong ton tai");
+
         return shipments[_id];
     }
 
@@ -150,13 +141,16 @@ contract LogisticsTracking is ILogisticsTracking {
         external
         view
         override
-        shipmentExists(_id)
         returns (StatusUpdate[] memory)
     {
+        require(shipments[_id].id != 0, "Shipment khong ton tai");
+
         return shipmentHistory[_id];
     }
 
     function getHistoryCount(uint256 _id) external view override returns (uint256) {
+        require(shipments[_id].id != 0, "Shipment khong ton tai");
+
         return shipmentHistory[_id].length;
     }
 }

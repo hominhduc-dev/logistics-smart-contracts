@@ -20,9 +20,9 @@ interface IWarehouse {
         bool exists;
     }
 
-    event StockReceived(uint256 indexed productId, uint256 amount, uint256 newQuantity);
-    event TakenForShelf(uint256 indexed productId, uint256 amount, uint256 remaining);
-    event ReturnedToWarehouse(uint256 indexed productId, uint256 amount, uint256 newQuantity);
+    event StockReceived(uint256 productId, uint256 amount, uint256 newQuantity);
+    event TakenForShelf(uint256 productId, uint256 amount, uint256 remaining);
+    event ReturnedToWarehouse(uint256 productId, uint256 amount, uint256 newQuantity);
 
     function receiveStock(uint256 productId, uint256 amount) external;
 
