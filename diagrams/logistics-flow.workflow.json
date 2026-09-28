@@ -1,0 +1,34 @@
+{
+    "schema_version": 2,
+    "diagram_type": "workflow",
+    "meta": {
+          "title": "Luong van hanh LogisticsTracking.sol",
+          "output": "logistics-flow.html",
+          "quality_profile": "showcase"
+    },
+    "lanes": [
+          { "id": "sender", "label": "Sender" },
+          { "id": "carrier", "label": "Carrier / Receiver" },
+          { "id": "exceptions", "label": "Huy don hang", "variant": "exception" }
+    ],
+    "mainPath": ["create_shipment", "picked_up", "in_transit", "delivered", "received"],
+    "nodes": [
+          { "id": "create_shipment", "lane": "sender", "col": 0, "type": "frontend", "label": "Tao don hang", "sublabel": "createShipment()", "tag": "status: Created" },
+          { "id": "picked_up", "lane": "carrier", "col": 1, "type": "backend", "label": "Lay hang", "sublabel": "updateStatus()", "tag": "status: PickedUp" },
+          { "id": "in_transit", "lane": "carrier", "col": 2, "type": "backend", "label": "Dang van chuyen", "sublabel": "updateStatus()", "tag": "status: InTransit", "width": 112 },
+          { "id": "delivered", "lane": "carrier", "col": 3, "type": "backend", "label": "Giao hang", "sublabel": "updateStatus()", "tag": "status: Delivered" },
+          { "id": "received", "lane": "carrier", "col": 4, "type": "frontend", "label": "Nhan hang", "sublabel": "xac nhan cuoi" },
+          { "id": "history_log", "lane": "carrier", "col": 5, "type": "database", "label": "Ghi lich su", "sublabel": "StatusUpdate[] + event", "tag": "on-chain", "width": 116 },
+          { "id": "cancelled", "lane": "exceptions", "col": 1, "type": "security", "label": "Huy don hang", "sublabel": "cancelShipment()", "tag": "chi Sender", "width": 112 }
+    ],
+    "edges": [
+          { "from": "create_shipment", "to": "picked_up" },
+          { "from": "picked_up", "to": "in_transit" },
+          { "from": "in_transit", "to": "delivered" },
+          { "from": "delivered", "to": "received", "label": "giao thanh cong" },
+          { "from": "received", "to": "history_log", "label": "ghi vet", "variant": "dashed", "role": "async" },
+          { "from": "create_shipment", "to": "cancelled", "label": "Sender huy khi Created", "variant": "security", "role": "branch", "route": "auto" },
+          { "from": "picked_up", "to": "cancelled", "label": "Sender huy khi PickedUp", "variant": "security", "role": "branch", "route": "auto" },
+          { "from": "cancelled", "to": "history_log", "variant": "dashed", "role": "async", "route": "auto" }
+    ]
+}

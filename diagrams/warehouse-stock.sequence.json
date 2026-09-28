@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Tuần tự gọi hàm Warehouse.sol",
+    "output": "warehouse-stock-sequence.html",
+    "viewBox": [1000, 620],
+    "column_fit": "spread",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    { "id": "supplier", "type": "external", "label": "Nhà cung cấp", "sublabel": "Supplier" },
+    { "id": "supermarket", "type": "frontend", "label": "Siêu thị", "sublabel": "Supermarket" },
+    { "id": "warehouse", "type": "backend", "label": "Warehouse", "sublabel": "smart contract" },
+    { "id": "events", "type": "messagebus", "label": "Event log", "sublabel": "dApp lắng nghe" }
+  ],
+  "segments": [
+    { "from": 152, "to": 226, "label": "Nhập hàng" },
+    { "from": 240, "to": 374, "label": "Lấy hàng lên kệ" },
+    { "from": 388, "to": 454, "label": "Trả hàng về kho" },
+    { "from": 468, "to": 534, "label": "Ngoại lệ: không đủ hàng" }
+  ],
+  "messages": [
+    { "from": "supplier", "to": "warehouse", "y": 176, "label": "receiveStock(id, amount)", "variant": "emphasis" },
+    { "from": "warehouse", "to": "events", "y": 210, "label": "StockReceived", "variant": "dashed" },
+    { "from": "supermarket", "to": "warehouse", "y": 256, "label": "getStock(id)", "variant": "default" },
+    { "from": "warehouse", "to": "supermarket", "y": 290, "label": "quantity", "variant": "return" },
+    { "from": "supermarket", "to": "warehouse", "y": 324, "label": "takeForShelf(id, amount)", "variant": "emphasis" },
+    { "from": "warehouse", "to": "events", "y": 358, "label": "TakenForShelf", "variant": "dashed" },
+    { "from": "supermarket", "to": "warehouse", "y": 404, "label": "returnFromShelf(id, amount)", "variant": "default" },
+    { "from": "warehouse", "to": "events", "y": 438, "label": "ReturnedToWarehouse", "variant": "dashed" },
+    { "from": "supermarket", "to": "warehouse", "y": 484, "label": "takeForShelf(amount > tồn kho)", "variant": "security" },
+    { "from": "warehouse", "to": "supermarket", "y": 518, "label": "revert: Not enough stock", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "warehouse", "from": 170, "to": 216, "type": "backend" },
+    { "participant": "warehouse", "from": 250, "to": 364, "type": "backend" },
+    { "participant": "warehouse", "from": 398, "to": 444, "type": "backend" },
+    { "participant": "warehouse", "from": 478, "to": 524, "type": "backend" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Trạng thái sau mỗi bước", "items": ["receiveStock: InStock", "takeForShelf: OutOfStock khi về 0", "returnFromShelf: Returned"] },
+    { "dot": "emerald", "title": "Số lượng được theo dõi", "items": ["quantity tăng khi nhập hoặc trả về", "returnedQuantity chỉ tăng khi trả về", "getStock trả 0 nếu chưa có sản phẩm"] },
+    { "dot": "rose", "title": "Chưa có phân quyền", "items": ["Địa chỉ nào cũng gọi được các hàm ghi", "amount = 0 luôn bị revert", "Thiếu hàng thì giao dịch revert, kho không đổi"] }
+  ]
+}
